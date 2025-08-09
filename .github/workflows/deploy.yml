@@ -2,43 +2,47 @@ name: Deploy to Azure with Terraform
 
 on:
   push:
-    branches:
-      - main
+    branches: [ main ]
   workflow_dispatch:
 
 jobs:
   terraform:
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: terraform
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Set up Terraform
-        uses: hashicorp/setup-terraform@v3
+      - uses: hashicorp/setup-terraform@v3
         with:
           terraform_version: 1.9.0
 
-      # Extract SP creds from GitHub secret and set them for Terraform
-      - name: Set Terraform Azure Credentials
+      - name: Azure Login (SP)
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Get storage account key
+        id: getkey
         run: |
-          echo "ARM_CLIENT_ID=$(echo '${{ secrets.AZURE_CREDENTIALS }}' | jq -r .clientId)" >> $GITHUB_ENV
-          echo "ARM_CLIENT_SECRET=$(echo '${{ secrets.AZURE_CREDENTIALS }}' | jq -r .clientSecret)" >> $GITHUB_ENV
-          echo "ARM_SUBSCRIPTION_ID=$(echo '${{ secrets.AZURE_CREDENTIALS }}' | jq -r .subscriptionId)" >> $GITHUB_ENV
-          echo "ARM_TENANT_ID=$(echo '${{ secrets.AZURE_CREDENTIALS }}' | jq -r .tenantId)" >> $GITHUB_ENV
+          KEY=$(az storage account keys list \
+            --account-name stroageweatherapp \
+            --resource-group tfstate-rg \
+            --query "[0].value" -o tsv)
+          echo "ACC_KEY=$KEY" >> $GITHUB_OUTPUT
 
-      - name: Terraform Init
-        run: terraform init
-        working-directory: terraform
+      - name: Terraform Init (with backend access key)
+        run: |
+          terraform init \
+            -backend-config="resource_group_name=tfstate-rg" \
+            -backend-config="storage_account_name=stroageweatherapp" \
+            -backend-config="container_name=container1" \
+            -backend-config="key=terraform.tfstate" \
+            -backend-config="access_key=${{ steps.getkey.outputs.ACC_KEY }}"
 
-      - name: Terraform Validate
-        run: terraform validate
-        working-directory: terraform
-
-      - name: Terraform Plan
-        run: terraform plan -out=tfplan
-        working-directory: terraform
-
-      - name: Terraform Apply
+      - run: terraform validate
+      - run: terraform plan -out=tfplan
+      - if: github.ref == 'refs/heads/main'
         run: terraform apply -auto-approve tfplan
-        working-directory: terraform

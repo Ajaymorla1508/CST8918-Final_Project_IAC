@@ -114,4 +114,4 @@ Accessible via browser.
 
 -  Example: URL: http://<external-ip>
 
-![Weather application running successfully](.img/weather-app.png)
+![Weather application running successfully](img/weather-app.png)

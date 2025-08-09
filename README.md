@@ -115,3 +115,5 @@ Accessible via browser.
 -  Example: URL: http://<external-ip>
 
 ![Weather application running successfully](img/weather-app.png)
+
+### Step 7 - Pushed Project to the Github

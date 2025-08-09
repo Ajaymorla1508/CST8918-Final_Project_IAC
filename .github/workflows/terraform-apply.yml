@@ -1,0 +1,39 @@
+name: Terraform Apply (main)
+
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: terraform
+    steps:
+      - uses: actions/checkout@v4
+      - uses: hashicorp/setup-terraform@v3
+        with: { terraform_version: 1.9.0 }
+      - name: Azure Login (SP)
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+      - name: Get storage account key
+        id: getkey
+        run: |
+          KEY=$(az storage account keys list \
+            --account-name stroageweatherapp \
+            --resource-group tfstate-rg \
+            --query "[0].value" -o tsv)
+          echo "ACC_KEY=$KEY" >> $GITHUB_OUTPUT
+      - name: Init backend
+        run: |
+          terraform init \
+            -backend-config="resource_group_name=tfstate-rg" \
+            -backend-config="storage_account_name=stroageweatherapp" \
+            -backend-config="container_name=container1" \
+            -backend-config="key=terraform.tfstate" \
+            -backend-config="access_key=${{ steps.getkey.outputs.ACC_KEY }}"
+      - run: terraform validate
+      - run: terraform plan -out=tfplan
+      - run: terraform apply -auto-approve tfplan

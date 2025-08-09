@@ -1,0 +1,22 @@
+name: Terraform Static Checks
+
+on:
+  push:
+    branches: [ "**" ]
+
+jobs:
+  static:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: terraform
+    steps:
+      - uses: actions/checkout@v4
+      - uses: hashicorp/setup-terraform@v3
+        with: { terraform_version: 1.9.0 }
+      - run: terraform fmt -check
+      - run: terraform validate
+      - name: tfsec
+        uses: aquasecurity/tfsec-action@v1.0.3
+        with:
+          working_directory: terraform

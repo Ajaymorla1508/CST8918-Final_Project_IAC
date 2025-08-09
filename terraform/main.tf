@@ -1,46 +1,62 @@
-provider "azurerm" {
-  features {}
-  subscription_id = "a9fc334c-4082-43d8-95c1-4bb0f83c8a71"
+# ACR
+resource "azurerm_container_registry" "acr" {
+  name                = var.acr_name
+  resource_group_name = var.resource_group_name
+  location            = var.location
+  sku                 = "Basic"
+  admin_enabled       = true
 }
 
-
-resource "azurerm_resource_group" "weather" {
-  name     = var.resource_group_name
-  location = var.location
+# Redis (test)
+resource "azurerm_redis_cache" "test" {
+  name                = var.redis_test_name
+  location            = var.location
+  resource_group_name = var.resource_group_name
+  capacity            = 1
+  family              = "C"
+  sku_name            = "Basic"
 }
 
-resource "azurerm_storage_account" "weather" {
-  name                     = var.storage_account_name
-  resource_group_name      = azurerm_resource_group.weather.name
-  location                 = azurerm_resource_group.weather.location
-  account_tier             = "Standard"
-  account_replication_type = "LRS"
+# Redis (prod)
+resource "azurerm_redis_cache" "prod" {
+  name                = var.redis_prod_name
+  location            = var.location
+  resource_group_name = var.resource_group_name
+  capacity            = 1
+  family              = "C"
+  sku_name            = "Basic"
 }
 
-resource "azurerm_service_plan" "weather" {
-  name                = var.app_service_plan_name
-  location            = azurerm_resource_group.weather.location
-  resource_group_name = azurerm_resource_group.weather.name
-  os_type             = "Linux"
-  sku_name            = "Y1"
-}
+# AKS (test)
+resource "azurerm_kubernetes_cluster" "aks_test" {
+  name                = var.aks_name_test
+  location            = var.location
+  resource_group_name = var.resource_group_name
+  dns_prefix          = "akstest"
+  kubernetes_version  = var.kubernetes_version
 
-resource "azurerm_linux_function_app" "weather_app" {
-  name                       = var.function_app_name
-  location                   = azurerm_resource_group.weather.location
-  resource_group_name        = azurerm_resource_group.weather.name
-  service_plan_id            = azurerm_service_plan.weather.id
-  storage_account_name       = azurerm_storage_account.weather.name
-  storage_account_access_key = azurerm_storage_account.weather.primary_access_key
-
-  site_config {
-    application_stack {
-      node_version = "18"
-    }
+  default_node_pool {
+    name       = "default"
+    node_count = 1
+    vm_size    = "Standard_B2s"
   }
 
-  app_settings = {
-    FUNCTIONS_WORKER_RUNTIME = "node"
-    WEBSITE_RUN_FROM_PACKAGE = "1"
+  identity { type = "SystemAssigned" }
+}
+
+# AKS (prod autoscale 1..3)
+resource "azurerm_kubernetes_cluster" "aks_prod" {
+  name                = var.aks_name_prod
+  location            = var.location
+  resource_group_name = var.resource_group_name
+  dns_prefix          = "aksprod"
+  kubernetes_version  = var.kubernetes_version
+
+  default_node_pool {
+    name       = "default"
+    node_count = 1
+    vm_size    = "Standard_B2s"
   }
+
+  identity { type = "SystemAssigned" }
 }

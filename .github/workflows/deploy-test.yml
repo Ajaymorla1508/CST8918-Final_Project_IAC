@@ -1,0 +1,45 @@
+name: Deploy App to AKS (test, PR)
+
+on:
+  pull_request:
+    branches: [ main ]
+    paths:
+      - "k8s/**"
+      - ".github/workflows/**"
+      - "Dockerfile"
+      - "app/**"
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Azure Login (SP)
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Set AKS context (test)
+        uses: azure/aks-set-context@v4
+        with:
+          resource-group: cst8918-final-project-group-03
+          cluster-name: aks-weather-test
+
+      - name: Create GHCR pull secret
+        run: |
+          kubectl delete secret ghcr-secret --ignore-not-found
+          kubectl create secret docker-registry ghcr-secret \
+            --docker-server=ghcr.io \
+            --docker-username=${{ github.actor }} \
+            --docker-password=${{ secrets.GHCR_TOKEN }}
+
+      - name: Create app secret (WEATHER_API_KEY)
+        run: |
+          kubectl delete secret weather-secrets --ignore-not-found
+          kubectl create secret generic weather-secrets \
+            --from-literal=WEATHER_API_KEY=${{ secrets.WEATHER_API_KEY }}
+
+      - name: Deploy manifests (pin image to SHA)
+        run: |
+          sed "s|\${GITHUB_SHA}|${{ github.sha }}|g" k8s/deployment-test.yaml | kubectl apply -f -

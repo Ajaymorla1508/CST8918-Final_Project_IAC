@@ -1,6 +1,8 @@
 provider "azurerm" {
   features {}
+  subscription_id = "a9fc334c-4082-43d8-95c1-4bb0f83c8a71"
 }
+
 
 resource "azurerm_resource_group" "weather" {
   name     = var.resource_group_name
@@ -15,27 +17,21 @@ resource "azurerm_storage_account" "weather" {
   account_replication_type = "LRS"
 }
 
-resource "azurerm_app_service_plan" "weather" {
+resource "azurerm_service_plan" "weather" {
   name                = var.app_service_plan_name
   location            = azurerm_resource_group.weather.location
   resource_group_name = azurerm_resource_group.weather.name
-  kind                = "FunctionApp"
-  reserved            = true
-
-  sku {
-    tier = "Dynamic"
-    size = "Y1"
-  }
+  os_type             = "Linux"
+  sku_name            = "Y1"
 }
 
-resource "azurerm_function_app" "weather_app" {
+resource "azurerm_linux_function_app" "weather_app" {
   name                       = var.function_app_name
   location                   = azurerm_resource_group.weather.location
   resource_group_name        = azurerm_resource_group.weather.name
-  app_service_plan_id        = azurerm_app_service_plan.weather.id
+  service_plan_id            = azurerm_service_plan.weather.id
   storage_account_name       = azurerm_storage_account.weather.name
   storage_account_access_key = azurerm_storage_account.weather.primary_access_key
-  version                    = "~4"
 
   site_config {
     application_stack {

@@ -1,24 +1,29 @@
-variable "location" {
-  type    = string
-  default = "canadacentral"
+variable "resource_group_name" {
+  description = "Name of the resource group"
+  type        = string
+  default     = "weather-rg"
 }
 
-variable "resource_group_name" {
-  type    = string
-  default = "weather-api-rg"
+variable "location" {
+  description = "Azure location for all resources"
+  type        = string
+  default     = "East US"
 }
 
 variable "storage_account_name" {
-  type    = string
-  default = "weatherapistorage"
+  description = "Name of the storage account"
+  type        = string
+  default     = "weatherstorageacct"
 }
 
 variable "app_service_plan_name" {
-  type    = string
-  default = "weather-api-plan"
+  description = "Name of the App Service Plan"
+  type        = string
+  default     = "weather-asp"
 }
 
 variable "function_app_name" {
-  type    = string
-  default = "weather-api-func"
+  description = "Name of the Function App"
+  type        = string
+  default     = "weather-func-app"
 }

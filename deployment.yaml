@@ -1,0 +1,39 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: weather-app
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: weather-app
+  template:
+    metadata:
+      labels:
+        app: weather-app
+    spec:
+      containers:
+        - name: weather-app
+          image: ghcr.io/ajaymorla1508/weather-app:latest
+          ports:
+            - containerPort: 3000
+          imagePullPolicy: Always
+          env:
+            - name: WEATHER_API_KEY
+              value: "c1cd94d0c2cb97ac875ae02cd53a2c7d"
+            - name: REDIS_URL
+              value: "redis://redis:6379"
+      imagePullSecrets:
+        - name: ghcr-secret 
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: weather-service
+spec:
+  type: LoadBalancer
+  selector:
+    app: weather-app
+  ports:
+    - port: 80
+      targetPort: 3000
